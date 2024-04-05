@@ -21,15 +21,15 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-mode", help="append 모드일 시 로그인할 계정 추가 가능.")
-parser.add_argument("-recovery", help="복구모드. 계정에 상관없이 전체 악보 다운로드함.")
+parser.add_argument("--mode", "-m", help="append 모드일 시 로그인할 계정 추가, delete 모드일 시 추가된 계정 삭제 가능")
+parser.add_argument("--recovery", "-r", help="복구모드. 계정에 상관없이 전체 악보 다운로드함.", action='store_true')
+parser.add_argument("--vpn", "-v", help="vpn 프록시를 사용해 다운로드함.", action='store_true')
 args = parser.parse_args()
 
 login_data = []
 isRecoveryMode = False
 system = os.name
-
-PROXY = ("221.162.70.124:3129", "64.110.83.145:3128")
+PROXY = []
 
 
 class akbo:
@@ -54,10 +54,17 @@ class akbo:
 
 
 def get_proxy():
-    s = requests.Session()
-    response = s.get("http://free-proxy.cz/en/proxylist/country/KR/https/ping/all")
-    time.sleep(1)
+    global PROXY
 
+    driver = create_driver()
+    driver.get("http://free-proxy.cz/en/proxylist/country/KR/all/ping/all")
+    driver.implicitly_wait(5)
+
+    entry = driver.find_element(By.TAG_NAME, "tbody")
+    for proxy_datas in entry.find_elements(By.XPATH, ".//*"):
+        ip = proxy_datas.find_elements(By.XPATH, ".//*")[0].find_elements(By.XPATH, ".//*")[1].text
+        port = proxy_datas.find_elements(By.XPATH, ".//*")[1].find_element(By.TAG_NAME, "span").text
+        PROXY.append(str(ip+":"+port))
 
 
 def make_base_path(filename, resp: str):
@@ -131,11 +138,13 @@ def main(argv, args):
         with open(make_base_path("login_data.p", "local"), "rb") as f:
             login_data = pickle.load(f)
 
-    if args.recovery == "1":
+    if args.recovery:
         print("복구모드 진행")
         isRecoveryMode = True
 
-    print(isRecoveryMode)
+    if args.vpn:
+        print("프록시를 사용하여 다운로드합니다.")
+        get_proxy()
 
     with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
         results = pool.map(partial(AkbobadaDownloader, isRecoveryMode=isRecoveryMode), login_data)
@@ -148,14 +157,17 @@ def create_driver():
     options.add_argument("headless")
 
     service = Service(ChromeDriverManager().install())
-    # proxy = random.choice(PROXY)
-    # webdriver.DesiredCapabilities.CHROME['proxy'] = {
-    #     "httpProxy": proxy,
-    #     "ftpProxy": proxy,
-    #     "httpsProxy": proxy,
-    #     "sslProxy": proxy,
-    #     "proxyType": "MANUAL"
-    # }
+
+    if PROXY:
+        proxy = random.choice(PROXY)
+        webdriver.DesiredCapabilities.CHROME['proxy'] = {
+            "httpProxy": proxy,
+            "ftpProxy": proxy,
+            "httpsProxy": proxy,
+            "sslProxy": proxy,
+            "proxyType": "MANUAL"
+        }
+        print(f"프록시 정보: "+proxy)
     driver = webdriver.Chrome(service=service, options=options)
     driver.set_window_size(1280, 720)
     return driver
