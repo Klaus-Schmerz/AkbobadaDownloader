@@ -5,6 +5,9 @@
 ```
 git clone https://github.com/Klaus-Schmerz/AkbobadaDownloader.git
 ```
+```
+pip install -u requirements.txt
+```
 
 ## Features
 * 아이디와 비밀번호 입력 한 번으로 계정의 모든 악보 다운로드
