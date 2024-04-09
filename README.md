@@ -46,11 +46,6 @@ python main.py -r
 python main.py -r -p
 ```
 
-## Supported OS
-Windows  
-Mac  
-Linux
-
 ## Troubleshoot
 In windows:
 ```
@@ -58,6 +53,6 @@ DELETE %APPDATA%\Local\skymj\(악보바다 ID)_last.p
 ```
 In Mac or Linux:
 ```
-DELETE ~\.local\share\skymj\(악보바다 ID)_last.p\
+DELETE ~\.local\share\skymj\(악보바다 ID)_last.p
 ```
 
