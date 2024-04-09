@@ -158,16 +158,16 @@ def create_driver():
 
     service = Service(ChromeDriverManager().install())
 
-    if PROXY:
-        proxy = random.choice(PROXY)
-        webdriver.DesiredCapabilities.CHROME['proxy'] = {
-            "httpProxy": proxy,
-            "ftpProxy": proxy,
-            "httpsProxy": proxy,
-            "sslProxy": proxy,
-            "proxyType": "MANUAL"
-        }
-        print(f"프록시 정보: "+proxy)
+    # if PROXY:
+    #     proxy = random.choice(PROXY)
+    #     webdriver.DesiredCapabilities.CHROME['proxy'] = {
+    #         "httpProxy": proxy,
+    #         "ftpProxy": proxy,
+    #         "httpsProxy": proxy,
+    #         "sslProxy": proxy,
+    #         "proxyType": "MANUAL"
+    #     }
+    #     print(f"프록시 정보: "+proxy)
     driver = webdriver.Chrome(service=service, options=options)
     driver.set_window_size(1280, 720)
     return driver
@@ -233,7 +233,7 @@ def multiFinding(driver: webdriver, username, isRecoveryMode: bool):
                     actions = ActionChains(driver).move_to_element(button).click()
                     actions.perform()
 
-                    time.sleep(3)
+                    time.sleep(4)
                     popup_windows = driver.window_handles
                     for window in popup_windows:
                         if window != popup_windows[0]:
@@ -263,15 +263,15 @@ def download(cookies, username, target: akbo):
 
     print(target.id)
 
-    response = s.get(target.make_url(), verify=False)
-    time.sleep(4)
+    response = s.get(target.make_url(), verify=False, stream=True)
 
     if not os.path.isdir(make_base_path("", "save")+target.position):
         os.mkdir(make_base_path("", "save")+target.position)
 
     try:
         with open(make_base_path("", "save")+f"{target.position}/"+target.make_file_name(), "wb") as f:
-            f.write(response.content)
+            for chunk in response.iter_content(chunk_size=128):
+                f.write(chunk)
         print(f"{str(target)} downloaded")
     except Exception as e:
         print(f"Error: {target} - {e}")
