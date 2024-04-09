@@ -88,6 +88,23 @@ def make_base_path(filename, resp: str):
         return "./"+filename
 
 
+def replace_filename(filename):
+    table = {
+        "\\": "＼",
+        "/": "／",
+        ":": "∶",
+        "*": "＊",
+        "?": "？",
+        '"': "＂",
+        "<": "＜",
+        ">": "＞",
+        "|": "｜"
+    }
+    for nallowed in table.keys():
+        filename = filename.replace(nallowed, table[nallowed])
+    return filename
+
+
 def main(argv, args):
     global login_data
     global isRecoveryMode
@@ -275,7 +292,7 @@ def download(cookies, username, target: akbo):
         os.mkdir(make_base_path("", "save")+target.position)
 
     try:
-        with open(make_base_path("", "save")+f"{target.position}/"+target.make_file_name(), "wb") as f:
+        with open(make_base_path("", "save")+f"{target.position}/"+replace_filename(target.make_file_name()), "wb") as f:
             for chunk in response.iter_content(chunk_size=128):
                 f.write(chunk)
         print(f"{str(target)} downloaded")
