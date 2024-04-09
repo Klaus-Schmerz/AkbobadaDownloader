@@ -47,7 +47,7 @@ python main.py -r -p
 ```
 
 ## Troubleshoot
-In windows:
+In Windows:
 ```
 DELETE %APPDATA%\Local\skymj\(악보바다 ID)_last.p
 ```
