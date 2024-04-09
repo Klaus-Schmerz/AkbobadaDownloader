@@ -43,7 +43,7 @@ python main.py -m append
 python main.py -r
 ```
 ```
-python main.py -r -v
+python main.py -r -p
 ```
 
 ## Supported OS
