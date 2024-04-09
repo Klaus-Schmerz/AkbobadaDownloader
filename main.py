@@ -5,6 +5,8 @@ import os
 import time
 import random
 import sys
+import re
+import json
 
 import multiprocessing
 from functools import partial
@@ -56,15 +58,18 @@ class akbo:
 def get_proxy():
     global PROXY
 
-    driver = create_driver()
-    driver.get("http://free-proxy.cz/en/proxylist/country/KR/all/ping/all")
-    driver.implicitly_wait(5)
+    with requests.get("https://proxylist.geonode.com/api/proxy-list?limit=500&page=1&sort_by=lastChecked&sort_type=desc") as session:
+        raw_proxy_list = json.loads(session.content)
+    proxy_list = list()
 
-    entry = driver.find_element(By.TAG_NAME, "tbody")
-    for proxy_datas in entry.find_elements(By.XPATH, ".//*"):
-        ip = proxy_datas.find_elements(By.XPATH, ".//*")[0].find_elements(By.XPATH, ".//*")[1].text
-        port = proxy_datas.find_elements(By.XPATH, ".//*")[1].find_element(By.TAG_NAME, "span").text
-        PROXY.append(str(ip+":"+port))
+    for raw_proxy in raw_proxy_list['data']:
+        if raw_proxy['country'] == "KR" or raw_proxy['country'] == "JP":
+            proxy_list.append(":".join([raw_proxy['ip'], raw_proxy['port']]))
+
+    print("발견된 프록시 목록: ")
+    print(proxy_list)
+
+    PROXY = proxy_list
 
 
 def make_base_path(filename, resp: str):
@@ -147,33 +152,34 @@ def main(argv, args):
         get_proxy()
 
     with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
-        results = pool.map(partial(AkbobadaDownloader, isRecoveryMode=isRecoveryMode), login_data)
+        results = pool.map(partial(AkbobadaDownloader, isRecoveryMode=isRecoveryMode, proxy_list=PROXY), login_data)
 
     print(results)
 
 
-def create_driver():
+def create_driver(proxy_list: list):
     options = Options()
     options.add_argument("headless")
 
     service = Service(ChromeDriverManager().install())
 
-    # if PROXY:
-    #     proxy = random.choice(PROXY)
-    #     webdriver.DesiredCapabilities.CHROME['proxy'] = {
-    #         "httpProxy": proxy,
-    #         "ftpProxy": proxy,
-    #         "httpsProxy": proxy,
-    #         "sslProxy": proxy,
-    #         "proxyType": "MANUAL"
-    #     }
-    #     print(f"프록시 정보: "+proxy)
+    if not len(proxy_list) == 0:
+        proxy = random.choice(proxy_list)
+        print(f"프록시 정보: " + proxy)
+        webdriver.DesiredCapabilities.CHROME['proxy'] = {
+            "httpProxy": proxy,
+            "ftpProxy": proxy,
+            "httpsProxy": proxy,
+            "sslProxy": proxy,
+            "proxyType": "MANUAL"
+        }
     driver = webdriver.Chrome(service=service, options=options)
     driver.set_window_size(1280, 720)
     return driver
 
 
 def multiFinding(driver: webdriver, username, isRecoveryMode: bool):
+    print(f"{username} 다운로드 시작")
     driver.get("https://www.akbobada.com/mypage/my_order.html")
     wait = WebDriverWait(driver, 2)
     wait.until(EC.presence_of_element_located((By.TAG_NAME, "table")))
@@ -207,7 +213,7 @@ def multiFinding(driver: webdriver, username, isRecoveryMode: bool):
                 elif tag.get_attribute("class") == "sub":
                     spans = [span.text for span in tag.find_elements(By.TAG_NAME, "span")]
                     for span in spans:
-                        if span != "B" and 1 < len(span) < 7:
+                        if span != "B" and 1 < len(span) and not re.compile(r"Key").search(span):
                             position = span
                     id = tag.find_element(By.TAG_NAME, "button").get_attribute("onclick")[8:-1].split(',')[0]
                     score = akbo(title, maker, position, id, username)
@@ -277,12 +283,12 @@ def download(cookies, username, target: akbo):
         print(f"Error: {target} - {e}")
 
 
-def AkbobadaDownloader(user: dict, isRecoveryMode: bool):
+def AkbobadaDownloader(user: dict, isRecoveryMode: bool, proxy_list: list):
     start_time = time.time()
     print(user['id'])
     login_data = user
 
-    driver = create_driver()
+    driver = create_driver(proxy_list)
 
     wait = WebDriverWait(driver, 2)
 
