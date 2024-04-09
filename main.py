@@ -25,7 +25,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 parser = argparse.ArgumentParser()
 parser.add_argument("--mode", "-m", help="append 모드일 시 로그인할 계정 추가, delete 모드일 시 추가된 계정 삭제 가능")
 parser.add_argument("--recovery", "-r", help="복구모드. 계정에 상관없이 전체 악보 다운로드함.", action='store_true')
-parser.add_argument("--vpn", "-v", help="vpn 프록시를 사용해 다운로드함.", action='store_true')
+parser.add_argument("--proxy", "-p", help="프록시를 사용해 다운로드함.", action='store_true')
 args = parser.parse_args()
 
 login_data = []
@@ -147,7 +147,7 @@ def main(argv, args):
         print("복구모드 진행")
         isRecoveryMode = True
 
-    if args.vpn:
+    if args.proxy:
         print("프록시를 사용하여 다운로드합니다.")
         get_proxy()
 
