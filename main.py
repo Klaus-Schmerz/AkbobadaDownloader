@@ -177,8 +177,13 @@ def main(argv, args):
 def create_driver(proxy_list: list):
     options = Options()
     options.add_argument("headless")
+    options.add_argument("--disable-extensions")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--no-sandbox")
 
-    service = Service(ChromeDriverManager().install())
+    old_driver_path = ChromeDriverManager().install()
+    new_driver_path = os.path.join(os.path.dirname(old_driver_path), "chromedriver.exe")
+    service = Service(executable_path=new_driver_path)
 
     if not len(proxy_list) == 0:
         proxy = random.choice(proxy_list)
@@ -198,7 +203,7 @@ def create_driver(proxy_list: list):
 def multiFinding(driver: webdriver, username, isRecoveryMode: bool):
     print(f"{username} 다운로드 시작")
     driver.get("https://www.akbobada.com/mypage/my_order.html")
-    wait = WebDriverWait(driver, 2)
+    wait = WebDriverWait(driver, 4)
     wait.until(EC.presence_of_element_located((By.TAG_NAME, "table")))
 
     cookies = driver.get_cookies()
