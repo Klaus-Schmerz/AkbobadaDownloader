@@ -19,6 +19,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import NoSuchWindowException
 
 from webdriver_manager.chrome import ChromeDriverManager
 
@@ -197,17 +198,24 @@ def create_driver(proxy_list: list):
         }
     driver = webdriver.Chrome(service=service, options=options)
     driver.set_window_size(1280, 720)
+
+    cap = driver.capabilities
+    chrome_driver_version = cap["chrome"]["chromedriverVersion"].split(' ')[0]
+    print("Running ChromeDriver version:", chrome_driver_version)
     return driver
 
 
 def multiFinding(driver: webdriver, username, isRecoveryMode: bool):
     print(f"{username} 다운로드 시작")
+    time.sleep(2)
     driver.get("https://www.akbobada.com/mypage/my_order.html")
-    wait = WebDriverWait(driver, 4)
+    wait = WebDriverWait(driver, 10)
     wait.until(EC.presence_of_element_located((By.TAG_NAME, "table")))
 
     cookies = driver.get_cookies()
     last_score = None
+    main_window = driver.current_window_handle
+
     if os.path.isfile(make_base_path(f"{username}_last.p", "local")):
         with open(make_base_path(f"{username}_last.p", "local"), 'rb') as f:
             last_score = pickle.load(f)
@@ -258,16 +266,23 @@ def multiFinding(driver: webdriver, username, isRecoveryMode: bool):
                     print(score)
 
                     button = tag.find_element(By.TAG_NAME, "button")
+                    driver.execute_script("arguments[0].scrollIntoView();", button)
                     actions = ActionChains(driver).move_to_element(button).click()
                     actions.perform()
 
                     time.sleep(4)
-                    popup_windows = driver.window_handles
-                    for window in popup_windows:
-                        if window != popup_windows[0]:
-                            driver.switch_to.window(window)
-                            driver.close()
-                    driver.switch_to.window(popup_windows[0])
+
+                    windows = driver.window_handles[:]
+
+                    for window in windows:
+                        if window != main_window:
+                            try:
+                                driver.switch_to.window(window)
+                                driver.execute_script("close();")
+                            except NoSuchWindowException:
+                                pass
+
+                    driver.switch_to.window(main_window)
 
                     download(cookies, username, score)
                 else:
