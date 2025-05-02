@@ -182,6 +182,28 @@ def create_driver(proxy_list: list):
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
 
+    options.add_argument("--disable-infobars")
+    options.add_argument("--disable-notifications")
+    options.add_argument("--disable-popup-blocking")
+    options.add_argument("--disable-save-password-bubble")
+    options.add_argument("--disable-features="
+                         "PasswordChangeInSettingsLaunch,"
+                         "PasswordChangeInSettingsModule,"
+                         "PasswordCheck,"
+                         "PasswordLeakDetection")
+
+    prefs = {
+        "credentials_enable_service": False,
+        "profile.password_manager_enabled": False,
+        "profile.default_content_setting_values.notifications": 2,
+        "profile.default_content_setting_values.geolocation": 2,
+        "download.prompt_for_download": False,
+        "download.directory_upgrade": True,
+        "profile.password_manager_leak_detection": False,
+    }
+
+    options.add_experimental_option("prefs", prefs)
+
     old_driver_path = ChromeDriverManager().install()
     new_driver_path = os.path.join(os.path.dirname(old_driver_path), "chromedriver.exe")
     service = Service(executable_path=new_driver_path)
@@ -207,7 +229,14 @@ def create_driver(proxy_list: list):
 
 def multiFinding(driver: webdriver, username, isRecoveryMode: bool):
     print(f"{username} 다운로드 시작")
-    time.sleep(2)
+    time.sleep(5)
+
+    # 로그인 알림 해제
+    try:
+        driver.switch_to.alert.accept()
+    except:
+        pass
+
     driver.get("https://www.akbobada.com/mypage/my_order.html")
     wait = WebDriverWait(driver, 10)
     wait.until(EC.presence_of_element_located((By.TAG_NAME, "table")))
@@ -269,15 +298,18 @@ def multiFinding(driver: webdriver, username, isRecoveryMode: bool):
                     driver.execute_script("arguments[0].scrollIntoView();", button)
                     actions = ActionChains(driver).move_to_element(button).click()
                     actions.perform()
+                    time.sleep(2)
 
-                    time.sleep(4)
-
-                    windows = driver.window_handles[:]
+                    windows = driver.window_handles
 
                     for window in windows:
                         if window != main_window:
                             try:
                                 driver.switch_to.window(window)
+
+                                driver.implicitly_wait(10)
+                                # time.sleep(0.2)
+
                                 driver.execute_script("close();")
                             except NoSuchWindowException:
                                 pass
